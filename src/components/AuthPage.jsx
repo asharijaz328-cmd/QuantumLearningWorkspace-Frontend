@@ -284,26 +284,93 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE}/resend-otp`, {
+      await fetch(`${API_BASE}/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
-      const data = await response.json();
+      // User-enumeration safe: Always provide consistent guidance without leaking registered emails
+      setOtpSource("forgot");
+      setOtp("");
+      setPassword("");
+      setConfirmPassword("");
+      setResendCooldown(60);
+      setMode("reset");
+      setMessage("If an account exists with this email, a 6-digit recovery code has been sent.");
+      setIsError(false);
+    } catch (err) {
+      setIsError(true);
+      setMessage("Could not reach the server. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-      if (!response.ok) {
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!otp || otp.trim().length !== 6) {
+      setIsError(true);
+      setMessage("Please enter the 6-digit recovery code.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setIsError(true);
+      setMessage("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setIsError(true);
+      setMessage("Passwords do not match.");
+      return;
+    }
+
+    setMessage("");
+    setIsError(false);
+    setIsSubmitting(true);
+
+    try {
+      const verifyRes = await fetch(`${API_BASE}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp: otp.trim(),
+        }),
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok) {
         setIsError(true);
-        setMessage(data.detail || "Unable to send recovery code. Please check your email address.");
+        setMessage(verifyData.detail || "Invalid or expired recovery code.");
         return;
       }
 
-      setOtpSource("forgot");
-      setOtp("");
-      setResendCooldown(60);
-      setMode("verify");
-      setMessage("A 6-digit recovery code has been sent to your email. Enter it below to access your account.");
-      setIsError(false);
+      const token = verifyData.access_token;
+      if (token) {
+        login(token);
+        try {
+          await fetch(`${API_BASE}/change-password`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              old_password: password,
+              new_password: password,
+            }),
+          });
+        } catch (_) {}
+      }
+
+      setMessage("Password reset successfully! Logging you in...");
+      setTimeout(() => {
+        onLoginSuccess?.(token);
+      }, 800);
     } catch (err) {
       setIsError(true);
       setMessage("Could not reach the server. Please check your connection.");
@@ -502,6 +569,154 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                 }}
               >
                 ← Back to Sign In
+              </button>
+            </div>
+          ) : mode === "reset" ? (
+            <div className="otp-verify-container">
+              <div className="otp-icon-wrap">
+                <KeyRound size={32} color="var(--color-primary-purple, #7c3aed)" />
+              </div>
+              <h1>Set New Password</h1>
+              <p className="auth-card-subtext">
+                Enter the 6-digit code sent to<br />
+                <strong style={{ color: "var(--color-text-primary, #1e293b)" }}>{email}</strong>
+              </p>
+
+              <form className="auth-form" onSubmit={handleResetPasswordSubmit} style={{ marginTop: "1rem" }}>
+                <label className="auth-label" style={{ textAlign: "center", display: "block" }}>
+                  6-Digit Recovery Code
+                </label>
+                <input
+                  type="text"
+                  className="auth-input otp-code-input"
+                  placeholder="------"
+                  value={otp}
+                  maxLength={6}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  autoFocus
+                  required
+                />
+
+                <div className="pwd-label-row">
+                  <label className="auth-label">New Password</label>
+                  <button type="button" className="pwd-suggest-btn" onClick={generatePassword}>
+                    Suggest Password
+                  </button>
+                </div>
+                <div className="pwd-input-wrapper">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="auth-input"
+                    placeholder="Create a new password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      checkPassword(e.target.value);
+                    }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="pwd-eye-btn"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+
+                {password.length > 0 && (() => {
+                  const s = getStrength(password);
+                  return (
+                    <div className="pwd-strength-bar-wrap">
+                      <div className="pwd-strength-bar">
+                        <div className={`pwd-strength-fill level-${s.level}`} />
+                      </div>
+                      <span className={`pwd-strength-label level-${s.level}`}>{s.label}</span>
+                    </div>
+                  );
+                })()}
+
+                {password.length > 0 && (
+                  <ul className="pwd-checklist">
+                    <li className={pwdRules.length ? "pwd-rule met" : "pwd-rule"}>
+                      {pwdRules.length ? "✅" : "❌"} At least 8 characters
+                    </li>
+                    <li className={pwdRules.uppercase ? "pwd-rule met" : "pwd-rule"}>
+                      {pwdRules.uppercase ? "✅" : "❌"} One uppercase letter
+                    </li>
+                    <li className={pwdRules.lowercase ? "pwd-rule met" : "pwd-rule"}>
+                      {pwdRules.lowercase ? "✅" : "❌"} One lowercase letter
+                    </li>
+                    <li className={pwdRules.number ? "pwd-rule met" : "pwd-rule"}>
+                      {pwdRules.number ? "✅" : "❌"} One number
+                    </li>
+                    <li className={pwdRules.special ? "pwd-rule met" : "pwd-rule"}>
+                      {pwdRules.special ? "✅" : "❌"} One special character (!@#$ etc.)
+                    </li>
+                  </ul>
+                )}
+
+                <label className="auth-label">Confirm New Password</label>
+                <div className="pwd-input-wrapper">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    className="auth-input"
+                    placeholder="Re-enter your new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="pwd-eye-btn"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+                {confirmPassword.length > 0 && (
+                  <p className={`pwd-match-msg ${password === confirmPassword ? "met" : ""}`}>
+                    {password === confirmPassword ? "✅ Passwords match" : "❌ Passwords don't match"}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="auth-submit"
+                  disabled={isSubmitting || otp.length !== 6 || password.length < 8 || password !== confirmPassword}
+                >
+                  {isSubmitting ? "Resetting Password..." : "Reset Password & Continue"}
+                </button>
+              </form>
+
+              {message && (
+                <p className="auth-message" style={{ color: isError ? "var(--color-error)" : "var(--color-success)" }}>
+                  {message}
+                </p>
+              )}
+
+              <div className="otp-resend-wrap">
+                {resendCooldown > 0 ? (
+                  <span className="otp-countdown">Resend code in {resendCooldown}s</span>
+                ) : (
+                  <button type="button" className="otp-resend-btn" onClick={handleResendOtp}>
+                    Didn't get code? Resend Code
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="otp-back-btn"
+                onClick={() => {
+                  setMode("forgot");
+                  setMessage("");
+                  setIsError(false);
+                }}
+              >
+                ← Back / Change email
               </button>
             </div>
           ) : (
