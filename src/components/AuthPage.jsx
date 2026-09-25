@@ -47,7 +47,27 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
   const [isError, setIsError] = useState(false);
   const [canVerifyFromLogin, setCanVerifyFromLogin] = useState(false);
   const [otpSource, setOtpSource] = useState("signup");
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(600); // 10 minutes in seconds
+  const MAX_OTP_ATTEMPTS = 5;
   const { login } = useAuth();
+
+  // 10-minute expiry countdown timer
+  useEffect(() => {
+    let timer;
+    if ((mode === "verify" || mode === "reset") && otpExpiresIn > 0) {
+      timer = setInterval(() => {
+        setOtpExpiresIn((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [mode, otpExpiresIn]);
+
+  const formatExpiryTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   // 60-second cooldown timer for resend OTP
   useEffect(() => {
@@ -203,6 +223,16 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    if (failedAttempts >= MAX_OTP_ATTEMPTS) {
+      setIsError(true);
+      setMessage("Too many failed attempts (5/5). Code locked. Please click Resend Code to get a fresh code.");
+      return;
+    }
+    if (otpExpiresIn <= 0) {
+      setIsError(true);
+      setMessage("Verification code has expired. Please click Resend Code.");
+      return;
+    }
     if (!otp || otp.trim().length !== 6) {
       setIsError(true);
       setMessage("Please enter a valid 6-digit verification code.");
@@ -217,18 +247,25 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       const response = await fetch(`${API_BASE}/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().lower ? email.trim().toLowerCase() : email.trim(), otp: otp.trim() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase ? email.trim().toLowerCase() : email.trim(), otp: otp.trim() }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
         setIsError(true);
-        setMessage(data.detail || "Verification failed. Please try again.");
+        if (nextAttempts >= MAX_OTP_ATTEMPTS) {
+          setMessage("Too many failed attempts (5/5). Code locked for security. Please request a new code.");
+        } else {
+          setMessage(`${data.detail || "Verification failed."} (${MAX_OTP_ATTEMPTS - nextAttempts} attempts remaining)`);
+        }
         return;
       }
 
-      // Success -> Auto login to Dashboard
+      // Success -> Reset attempts
+      setFailedAttempts(0);
       if (data.access_token) {
         login(data.access_token);
       }
@@ -263,6 +300,9 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       }
 
       setResendCooldown(60);
+      setOtpExpiresIn(600); // Reset expiry to 10 minutes
+      setFailedAttempts(0); // Reset brute force attempts
+      setOtp("");
       setMessage("A fresh 6-digit verification code has been sent!");
       setIsError(false);
     } catch (err) {
@@ -296,6 +336,8 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       setPassword("");
       setConfirmPassword("");
       setResendCooldown(60);
+      setOtpExpiresIn(600); // 10 minutes
+      setFailedAttempts(0); // Reset failed attempts counter
       setMode("reset");
       setMessage("If an account exists with this email, a 6-digit recovery code has been sent.");
       setIsError(false);
@@ -309,6 +351,16 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
+    if (failedAttempts >= MAX_OTP_ATTEMPTS) {
+      setIsError(true);
+      setMessage("Too many failed attempts (5/5). Code locked. Please request a new code.");
+      return;
+    }
+    if (otpExpiresIn <= 0) {
+      setIsError(true);
+      setMessage("Recovery code has expired. Please click Resend Code to receive a new code.");
+      return;
+    }
     if (!otp || otp.trim().length !== 6) {
       setIsError(true);
       setMessage("Please enter the 6-digit recovery code.");
@@ -344,11 +396,18 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok) {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
         setIsError(true);
-        setMessage(verifyData.detail || "Invalid or expired recovery code.");
+        if (nextAttempts >= MAX_OTP_ATTEMPTS) {
+          setMessage("Too many failed attempts (5/5). Code locked for security. Please request a new code.");
+        } else {
+          setMessage(`${verifyData.detail || "Invalid recovery code."} (${MAX_OTP_ATTEMPTS - nextAttempts} attempts remaining)`);
+        }
         return;
       }
 
+      setFailedAttempts(0);
       const token = verifyData.access_token;
       if (token) {
         login(token);
@@ -477,7 +536,24 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                 <strong style={{ color: "var(--color-text, #1e293b)" }}>{email}</strong>
               </p>
 
-              <form className="auth-form" onSubmit={handleVerifyOtp} style={{ marginTop: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "center", margin: "0.25rem 0 1rem" }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.3rem 0.8rem",
+                  borderRadius: "999px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  background: otpExpiresIn > 60 ? "rgba(124, 58, 237, 0.08)" : "rgba(239, 68, 68, 0.1)",
+                  color: otpExpiresIn > 60 ? "var(--color-primary-purple, #7c3aed)" : "#ef4444",
+                  border: `1px solid ${otpExpiresIn > 60 ? "rgba(124, 58, 237, 0.2)" : "rgba(239, 68, 68, 0.25)"}`,
+                }}>
+                  ⏱️ {otpExpiresIn > 0 ? `Code expires in ${formatExpiryTime(otpExpiresIn)}` : "Code expired"}
+                </span>
+              </div>
+
+              <form className="auth-form" onSubmit={handleVerifyOtp} style={{ marginTop: "0.5rem" }}>
                 <label className="auth-label" style={{ textAlign: "center", display: "block" }}>
                   Enter 6-Digit Code
                 </label>
@@ -488,11 +564,16 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                   value={otp}
                   maxLength={6}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  disabled={failedAttempts >= MAX_OTP_ATTEMPTS || otpExpiresIn <= 0}
                   autoFocus
                   required
                 />
 
-                <button type="submit" className="auth-submit" disabled={isSubmitting || otp.length !== 6}>
+                <button
+                  type="submit"
+                  className="auth-submit"
+                  disabled={isSubmitting || otp.length !== 6 || failedAttempts >= MAX_OTP_ATTEMPTS || otpExpiresIn <= 0}
+                >
                   {isSubmitting ? "Verifying..." : "Verify & Continue"}
                 </button>
               </form>
@@ -582,7 +663,24 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                 <strong style={{ color: "var(--color-text-primary, #1e293b)" }}>{email}</strong>
               </p>
 
-              <form className="auth-form" onSubmit={handleResetPasswordSubmit} style={{ marginTop: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "center", margin: "0.25rem 0 1rem" }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.3rem 0.8rem",
+                  borderRadius: "999px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  background: otpExpiresIn > 60 ? "rgba(124, 58, 237, 0.08)" : "rgba(239, 68, 68, 0.1)",
+                  color: otpExpiresIn > 60 ? "var(--color-primary-purple, #7c3aed)" : "#ef4444",
+                  border: `1px solid ${otpExpiresIn > 60 ? "rgba(124, 58, 237, 0.2)" : "rgba(239, 68, 68, 0.25)"}`,
+                }}>
+                  ⏱️ {otpExpiresIn > 0 ? `Code expires in ${formatExpiryTime(otpExpiresIn)}` : "Code expired"}
+                </span>
+              </div>
+
+              <form className="auth-form" onSubmit={handleResetPasswordSubmit} style={{ marginTop: "0.5rem" }}>
                 <label className="auth-label" style={{ textAlign: "center", display: "block" }}>
                   6-Digit Recovery Code
                 </label>
@@ -593,6 +691,7 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                   value={otp}
                   maxLength={6}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  disabled={failedAttempts >= MAX_OTP_ATTEMPTS || otpExpiresIn <= 0}
                   autoFocus
                   required
                 />
@@ -685,7 +784,14 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                 <button
                   type="submit"
                   className="auth-submit"
-                  disabled={isSubmitting || otp.length !== 6 || password.length < 8 || password !== confirmPassword}
+                  disabled={
+                    isSubmitting ||
+                    otp.length !== 6 ||
+                    password.length < 8 ||
+                    password !== confirmPassword ||
+                    failedAttempts >= MAX_OTP_ATTEMPTS ||
+                    otpExpiresIn <= 0
+                  }
                 >
                   {isSubmitting ? "Resetting Password..." : "Reset Password & Continue"}
                 </button>
