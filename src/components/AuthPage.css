@@ -244,14 +244,23 @@
   color: var(--color-text-secondary);
 }
 
-.auth-row a {
+.auth-row a,
+.auth-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
   color: var(--color-accent-blue);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-.auth-row a:hover {
+.auth-row a:hover,
+.auth-link-btn:hover {
   color: var(--color-accent-purple);
+  text-decoration: underline;
 }
 
 .auth-submit {

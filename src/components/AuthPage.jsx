@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
-import { Bot, BookOpen, Target, Eye, EyeOff, Mail, Brain, Map, Network } from "lucide-react";
+import { Bot, BookOpen, Target, Eye, EyeOff, Mail, Brain, Map, Network, KeyRound } from "lucide-react";
 import "./AuthPage.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -46,6 +46,7 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [canVerifyFromLogin, setCanVerifyFromLogin] = useState(false);
+  const [otpSource, setOtpSource] = useState("signup");
   const { login } = useAuth();
 
   // 60-second cooldown timer for resend OTP
@@ -181,6 +182,7 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       } else {
         // Signup succeeded -> Transition to OTP verification
         if (data.requires_verification) {
+          setOtpSource("signup");
           setMode("verify");
           setOtp("");
           setResendCooldown(60);
@@ -266,6 +268,47 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
     } catch (err) {
       setIsError(true);
       setMessage("Failed to reach server to resend code.");
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email || !email.includes("@")) {
+      setIsError(true);
+      setMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setMessage("");
+    setIsError(false);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setIsError(true);
+        setMessage(data.detail || "Unable to send recovery code. Please check your email address.");
+        return;
+      }
+
+      setOtpSource("forgot");
+      setOtp("");
+      setResendCooldown(60);
+      setMode("verify");
+      setMessage("A 6-digit recovery code has been sent to your email. Enter it below to access your account.");
+      setIsError(false);
+    } catch (err) {
+      setIsError(true);
+      setMessage("Could not reach the server. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -407,12 +450,58 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                 type="button"
                 className="otp-back-btn"
                 onClick={() => {
-                  setMode("signup");
+                  setMode(otpSource === "forgot" ? "forgot" : "signup");
                   setMessage("");
                   setIsError(false);
                 }}
               >
-                ← Back / Change email
+                {otpSource === "forgot" ? "← Back to Forgot Password" : "← Back / Change email"}
+              </button>
+            </div>
+          ) : mode === "forgot" ? (
+            <div className="otp-verify-container">
+              <div className="otp-icon-wrap">
+                <KeyRound size={32} color="var(--color-primary-purple, #7c3aed)" />
+              </div>
+              <h1>Reset Password</h1>
+              <p className="auth-card-subtext">
+                Enter your registered email address and we'll send you a 6-digit verification code to recover your account.
+              </p>
+
+              <form className="auth-form" onSubmit={handleForgotPassword} style={{ marginTop: "1.25rem" }}>
+                <label className="auth-label">Email Address</label>
+                <input
+                  type="email"
+                  className="auth-input"
+                  placeholder="Enter your registered email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                  required
+                />
+
+                <button type="submit" className="auth-submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Sending Code..." : "Send Verification Code"}
+                </button>
+              </form>
+
+              {message && (
+                <p className="auth-message" style={{ color: isError ? "var(--color-error)" : "var(--color-success)" }}>
+                  {message}
+                </p>
+              )}
+
+              <button
+                type="button"
+                className="otp-back-btn"
+                style={{ marginTop: "1.5rem" }}
+                onClick={() => {
+                  setMode("login");
+                  setMessage("");
+                  setIsError(false);
+                }}
+              >
+                ← Back to Sign In
               </button>
             </div>
           ) : (
@@ -570,7 +659,17 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
                   {mode === "login" && (
                     <div className="auth-row">
                       <label><input type="checkbox" /> Remember me</label>
-                      <a href="#">Forgot password?</a>
+                      <button
+                        type="button"
+                        className="auth-link-btn"
+                        onClick={() => {
+                          setMode("forgot");
+                          setMessage("");
+                          setIsError(false);
+                        }}
+                      >
+                        Forgot password?
+                      </button>
                     </div>
                   )}
 
