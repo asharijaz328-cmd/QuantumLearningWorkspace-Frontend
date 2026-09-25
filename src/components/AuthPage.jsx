@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
-import { Bot, BookOpen, Target, Eye, EyeOff, Mail } from "lucide-react";
+import { Bot, BookOpen, Target, Eye, EyeOff, Mail, Brain, Map, Network } from "lucide-react";
 import "./AuthPage.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -290,7 +290,9 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
         <div className="particle" style={{ width: 6, height: 6, top: "25%", left: "15%", animationDelay: "0.5s" }}></div>
 
         <div className="auth-logo">
-          <div className="auth-logo-icon"></div>
+          <div className="auth-logo-icon">
+            <Brain size={24} strokeWidth={2.25} color="#ffffff" />
+          </div>
           <span className="auth-logo-text">StudyMind AI</span>
         </div>
 
@@ -300,31 +302,30 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
         </h1>
 
         <p className="auth-subtext">
-          Upload PDFs, YouTube lectures, articles, and notes. Let AI understand
-          your material, generate study aids, and build a personalized learning roadmap.
+          Upload your notes, PDFs, or lecture videos. StudyMind helps you understand difficult topics faster, test your memory and stay on track every day.
         </p>
 
         <div className="auth-feature">
           <span className="auth-feature-icon"><Bot size={20} /></span>
           <div>
-            <div className="auth-feature-title">RAG-Powered Chatbot</div>
-            <div className="auth-feature-desc">Ask questions about your study material</div>
+            <div className="auth-feature-title">AI Tutor</div>
+            <div className="auth-feature-desc">Chat with your notes & get instant, verified answers</div>
           </div>
         </div>
 
         <div className="auth-feature">
-          <span className="auth-feature-icon"><BookOpen size={20} /></span>
+          <span className="auth-feature-icon"><Network size={20} /></span>
           <div>
-            <div className="auth-feature-title">Knowledge Graph</div>
-            <div className="auth-feature-desc">Visualize connections between concepts</div>
+            <div className="auth-feature-title">Knowledge Map</div>
+            <div className="auth-feature-desc">See how all your topics and ideas link together</div>
           </div>
         </div>
 
         <div className="auth-feature">
-          <span className="auth-feature-icon"><Target size={20} /></span>
+          <span className="auth-feature-icon"><Map size={20} /></span>
           <div>
-            <div className="auth-feature-title">Smart Study Planner</div>
-            <div className="auth-feature-desc">AI identifies weak topics & plans your path</div>
+            <div className="auth-feature-title">Study Roadmap</div>
+            <div className="auth-feature-desc">Follow step-by-step milestones & keep your daily streak</div>
           </div>
         </div>
 
@@ -338,11 +339,23 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
         </button>
       </div>
 
-      <div className="auth-right" style={{ position: "relative" }}>
-        <div style={{ position: "absolute", top: "20px", right: "24px" }}>
+      <div className="auth-right">
+        <div className="auth-desktop-theme">
           <ThemeToggle />
         </div>
         <div className="auth-card">
+          <div className="auth-mobile-header">
+            <div
+              className="auth-mobile-logo"
+              onClick={() => onBackToHome ? onBackToHome() : (window.location.href = "/")}
+            >
+              <div className="auth-logo-icon">
+                <Brain size={20} strokeWidth={2.25} color="#ffffff" />
+              </div>
+              <span className="auth-logo-text">StudyMind AI</span>
+            </div>
+            <ThemeToggle />
+          </div>
           {mode === "verify" ? (
             <div className="otp-verify-container">
               <div className="otp-icon-wrap">

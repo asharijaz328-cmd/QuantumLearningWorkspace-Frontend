@@ -150,9 +150,11 @@ html, body {
 }
 .bento-card.wide { grid-column: span 3; }
 .bento-card.tall { grid-column: span 3; }
+.bento-card.normal { grid-column: span 3; }
 @media (min-width: 860px) {
   .bento-card.wide { grid-column: span 2; }
   .bento-card.tall { grid-column: span 1; grid-row: span 2; }
+  .bento-card.normal { grid-column: span 1; }
 }
 @media (max-width: 860px) {
   .bento-grid {
@@ -161,7 +163,8 @@ html, body {
     gap: 16px;
   }
   .bento-card.wide,
-  .bento-card.tall {
+  .bento-card.tall,
+  .bento-card.normal {
     width: 100%;
   }
 }
@@ -237,6 +240,100 @@ html, body {
   background: rgba(124, 58, 237, 0.15);
 }
 
+
+.how-it-works {
+  padding: 90px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 0.82rem;
+  color: var(--primary-light, #a78bfa);
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 32px 26px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+.step-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(124, 58, 237, 0.45);
+}
+.step-number {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: rgba(124, 58, 237, 0.22);
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  line-height: 1;
+  pointer-events: none;
+}
+.step-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--primary-light, #a78bfa);
+}
+.step-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.step-card p {
+  font-size: 0.93rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 22px;
+  flex-grow: 1;
+}
+.step-pill {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary-light, #a78bfa);
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  padding: 5px 12px;
+  border-radius: 8px;
+  width: fit-content;
+}
+@media (max-width: 860px) {
+  .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .how-it-works {
+    padding: 50px 16px;
+  }
+}
 
 .final-cta { padding: 60px 24px 100px; }
 .cta-card {

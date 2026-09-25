@@ -1,28 +1,50 @@
 import { useEffect, useRef, useState } from "react";
-import { Brain, FileText, PlayCircle, Globe, CheckCircle2, Inbox, CreditCard, Share2 } from "lucide-react";
+import { Brain, FileText, PlayCircle, Globe, CheckCircle2, Inbox, CreditCard, Share2, MessageSquare, Target, Network, Map, Trophy } from "lucide-react";
 import ThemeToggle from "./ThemeToggle.jsx";
 import "./LandingPage.css";
 
 const FEATURES = [
   {
     icon: Inbox,
-    title: "Multi-Source Ingestion",
-    body: "Drop in PDFs, YouTube lectures, or web articles. StudyMind extracts the substance and discards the noise.",
-    points: ["Semantic PDF parsing", "Auto-transcribed video lectures"],
+    title: "Learn from Any Source",
+    body: "Drop in your lecture PDFs, YouTube videos or web articles. StudyMind pulls out the key takeaways and organizes them for you.",
+    points: ["Clear takeaways from PDFs", "Turns video lectures into text"],
     size: "wide",
   },
   {
     icon: CreditCard,
     title: "Instant Flashcards",
-    body: "Every upload becomes spaced-repetition flashcards, tuned for what you're actually forgetting.",
+    body: "Automatically turns your material into bite-sized revision cards, helping you remember more in half the time.",
     size: "tall",
     demo: "flashcard",
   },
   {
-    icon: Share2,
-    title: "Connected Knowledge",
-    body: "StudyMind links related concepts across everything you've uploaded, so ideas stop living in isolated tabs.",
+    icon: MessageSquare,
+    title: "AI Tutor",
+    body: "Ask anything about your coursework and get friendly, instant explanations backed directly by your notes.",
+    points: ["Exact page & source references", "Ask follow-ups anytime"],
     size: "wide",
+  },
+  {
+    icon: Target,
+    title: "Smart Quizzes",
+    body: "Test what you know with quick practice questions made straight from your notes, with instant feedback.",
+    points: ["Instant scores & explanations", "Targets your weak spots"],
+    size: "normal",
+  },
+  {
+    icon: Network,
+    title: "Knowledge Map",
+    body: "See how all your topics connect so you understand the big picture instead of memorizing in isolation.",
+    points: ["Visual map of your topics", "Links concepts across files"],
+    size: "normal",
+  },
+  {
+    icon: Map,
+    title: "Study Roadmap",
+    body: "Stay on track with a clear, step-by-step study plan and daily streaks that keep you motivated.",
+    points: ["Clear learning milestones", "Daily streaks & progress tracking"],
+    size: "normal",
   },
 ];
 
@@ -187,7 +209,10 @@ export default function LandingPage({ onNavigate = () => {} }) {
       e.preventDefault();
       document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
     }}>Features</a>
-    <a href="#" onClick={(e) => e.preventDefault()}>How it Works</a>
+    <a href="#how-it-works" onClick={(e) => {
+      e.preventDefault();
+      document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+    }}>How it Works</a>
   </div>
   <div className="nav-actions">
     <ThemeToggle />
@@ -207,7 +232,7 @@ export default function LandingPage({ onNavigate = () => {} }) {
             Learn smarter with your own <span className="highlight">AI study partner</span>
           </h1>
           <p className="hero-subtitle">
-            Upload your material, ask questions grounded in what you actually studied,
+            Upload your material, ask questions grounded in what you actually studied
             and turn it into flashcards and quizzes automatically.
           </p>
           <div className="hero-tags">
@@ -220,7 +245,7 @@ export default function LandingPage({ onNavigate = () => {} }) {
               Get started free
             </button>
             <button className="btn-secondary" onClick={() => {
-              document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+              document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
             }}>
               See how it works
             </button>
@@ -230,8 +255,12 @@ export default function LandingPage({ onNavigate = () => {} }) {
 
       <section className="features" id="features">
         <div className="features-header">
-          <h2>Everything you need to actually retain it</h2>
-          <p>Stop losing material across a dozen tabs — StudyMind keeps it connected.</p>
+          <div className="section-badge">
+            <span className="dot" />
+            Features
+          </div>
+          <h2>Everything You Need to Learn & Retain</h2>
+          <p>Stop losing material across a dozen tabs — StudyMind keeps all your learning connected.</p>
         </div>
         <div className="bento-grid">
           {FEATURES.map((f) => (
@@ -249,6 +278,46 @@ export default function LandingPage({ onNavigate = () => {} }) {
               {f.demo === "flashcard" && <FlashcardDemo />}
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="how-it-works" id="how-it-works">
+        <div className="features-header">
+          <div className="section-badge">
+            <span className="dot" />
+            Simple 3-Step Flow
+          </div>
+          <h2>How StudyMind AI Works</h2>
+          <p>Turn your textbooks, lectures and notes into real understanding in minutes.</p>
+        </div>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">01</div>
+            <div className="step-icon-wrap">
+              <FileText size={22} className="step-icon" />
+            </div>
+            <h3>1. Upload Your Content</h3>
+            <p>Upload your lecture PDFs, YouTube videos or class notes. StudyMind instantly organizes your material so it's ready to study.</p>
+            <div className="step-pill">PDFs • YouTube • Articles</div>
+          </div>
+          <div className="step-card">
+            <div className="step-number">02</div>
+            <div className="step-icon-wrap">
+              <Brain size={22} className="step-icon" />
+            </div>
+            <h3>2. Understand & Explore</h3>
+            <p>Chat directly with your notes. Ask questions, clear tough doubts in simple words, and see how different topics connect.</p>
+            <div className="step-pill">AI Q&A • Concept Maps</div>
+          </div>
+          <div className="step-card">
+            <div className="step-number">03</div>
+            <div className="step-icon-wrap">
+              <Trophy size={22} className="step-icon" />
+            </div>
+            <h3>3. Practice & Master</h3>
+            <p>Lock in what you learned with quick flashcards, practice quizzes, and a clear study roadmap that keeps you consistent.</p>
+            <div className="step-pill">Flashcards • Quizzes • Milestones</div>
+          </div>
         </div>
       </section>
 
